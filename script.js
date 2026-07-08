@@ -1,8 +1,8 @@
 let cart = [];
 let total = 0;
 
-// WHATSAPP CONTACT REGISTRATION (Format: 923xxxxxxxx)
-const WHATSAPP_NUMBER = "923001234567"; 
+// WHATSAPP CONTACT REGISTRATION (Format: 923234962078)
+const WHATSAPP_NUMBER = "923234962078"; 
 
 // Premium Shopify Mock Catalog Dataset
 const productsData = {
