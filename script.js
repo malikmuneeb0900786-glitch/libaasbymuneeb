@@ -185,3 +185,4 @@ window.onclick = function(event) {
 window.openProductModal = openProductModal;
 window.closeProductModal = closeProductModal;
 window.toggleCart = toggleCart;
+window.sendToWhatsApp = sendToWhatsApp;
