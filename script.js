@@ -1,3 +1,22 @@
+
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyDMknsh9jUVtpA2ISrEEjcq0Q2Wq-vEb34",
+    authDomain: "libaasbymuneeb.firebaseapp.com",
+    projectId: "libaasbymuneeb",
+    storageBucket: "libaasbymuneeb.firebasestorage.app",
+    messagingSenderId: "417597787712",
+    appId: "1:417597787712:web:7c5b6ecba15f66c0aa19a5"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+
 let cart = [];
 let total = 0;
 
