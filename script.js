@@ -181,3 +181,7 @@ window.onclick = function(event) {
         modal.style.display = "none";
     }
 }
+// Make functions visible globally for HTML buttons
+window.openProductModal = openProductModal;
+window.closeProductModal = closeProductModal;
+window.toggleCart = toggleCart;
