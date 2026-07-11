@@ -1,127 +1,125 @@
+// ==========================================================================
+// LIBAAS BY MUNEEB - PRO E-COMMERCE CORE
+// ==========================================================================
 
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
+// --- 1. FIREBASE CONFIGURATION ---
+const firebaseConfig = {
     apiKey: "AIzaSyDMknsh9jUVtpA2ISrEEjcq0Q2Wq-vEb34",
     authDomain: "libaasbymuneeb.firebaseapp.com",
     projectId: "libaasbymuneeb",
     storageBucket: "libaasbymuneeb.firebasestorage.app",
     messagingSenderId: "417597787712",
     appId: "1:417597787712:web:7c5b6ecba15f66c0aa19a5"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-
-let cart = [];
-let total = 0;
-
-// WHATSAPP CONTACT REGISTRATION (Format: 923234962078)
-const WHATSAPP_NUMBER = "923234962078"; 
-
-// Premium Shopify Mock Catalog Dataset
-const productsData = {
-    1: {
-        title: "Classic Ivory Embroidered Lawn",
-        price: 4500,
-        description: [
-            "Fabric: Premium Airjet Lawn Shirt (3 Meters)",
-            "Dupatta: Digital Printed Pure Chiffon (2.5 Meters)",
-            "Trouser: Dyed Cambric Cotton (2.5 Meters)",
-            "Work: Heavy Intricate Front Thread Embroidery Patch"
-        ],
-        images: [
-            "https://images.unsplash.com/photo-1610030469983-98e550d6193c?q=80&w=600&auto=format&fit=crop",
-            "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?q=80&w=600&auto=format&fit=crop",
-            "https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=600&auto=format&fit=crop"
-        ]
-    },
-    2: {
-        title: "Crimson Luxury Festive 3-Piece",
-        price: 5200,
-        description: [
-            "Fabric: Premium Luxury Chiffon Shirt",
-            "Dupatta: Embroidered Net Border Finished Dupatta",
-            "Trouser: Premium Silk Trouser Fabric with Borders",
-            "Details: Sequins and Tilla Handwoven Threadwork Workpiece"
-        ],
-        images: [
-            "https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?q=80&w=600&auto=format&fit=crop",
-            "https://images.unsplash.com/photo-1609357605129-26f69add5d6e?q=80&w=600&auto=format&fit=crop",
-            "https://images.unsplash.com/photo-1621184455862-c163dfb30e0f?q=80&w=600&auto=format&fit=crop"
-        ]
-    },
-    3: {
-        title: "Midnight Black Chiffon Edition",
-        price: 5900,
-        description: [
-            "Fabric: Jet Black Pure Airjet Crinkle Chiffon",
-            "Dupatta: Organza Block Printed Luxury Dupatta",
-            "Trouser: Premium Dyed Raw Silk (2.5 Meters)",
-            "Aesthetics: Minimalist Golden Zari Border Trims on Daman & Sleeves"
-        ],
-        images: [
-            "https://images.unsplash.com/photo-1621184455862-c163dfb30e0f?q=80&w=600&auto=format&fit=crop",
-            "https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?q=80&w=600&auto=format&fit=crop",
-            "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?q=80&w=600&auto=format&fit=crop"
-        ]
-    }
 };
 
-// Cart Panel Side Toggle
-function toggleCart() {
-    document.getElementById('cart-sidebar').classList.toggle('open');
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const WHATSAPP_NUMBER = "923234962078";
+
+// --- 2. GLOBAL STATE (STORE) ---
+const Store = {
+    cart: [],
+    total: 0,
+    inventory: {}
+};
+
+// --- 3. INVENTORY & DOM MANAGEMENT ---
+async function initializeStorefront() {
+    try {
+        const querySnapshot = await getDocs(collection(db, "products"));
+        
+        let html2Piece = "";
+        let html3Piece = "";
+
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            const id = doc.id;
+            
+            // Clean & structure product data with safe fallbacks
+            const product = {
+                title: data.name || "Exclusive Collection Suit",
+                price: Number(data.price) || 0,
+                description: data.description ? data.description.split(",") : ["Premium Quality Lawn", "Luxury Finish"],
+                images: data.image ? [data.image] : ["https://images.unsplash.com/photo-1610030469983-98e550d6193c?q=80&w=600&auto=format&fit=crop"],
+                category: data.category ? data.category.trim() : "3 Piece"
+            };
+
+            // Save to global state
+            Store.inventory[id] = product;
+
+            // Generate beautifully structured HTML card
+            const cardHTML = `
+                <div class="product-card">
+                    <img src="${product.images[0]}" alt="${product.title}" loading="lazy">
+                    <h3>${product.title}</h3>
+                    <p class="price">PKR ${product.price.toLocaleString()}</p>
+                    <button class="view-btn" onclick="openProductModal('${id}')">View Details</button>
+                </div>
+            `;
+
+            // Sort into optimized HTML strings
+            if (product.category === "2 Piece") {
+                html2Piece += cardHTML;
+            } else {
+                html3Piece += cardHTML;
+            }
+        });
+
+        // Batch DOM updates for maximum rendering performance
+        const container2P = document.getElementById("suits-2piece");
+        const container3P = document.getElementById("suits-3piece");
+        
+        if (container2P) container2P.innerHTML = html2Piece || "<p>Coming Soon...</p>";
+        if (container3P) container3P.innerHTML = html3Piece || "<p>Coming Soon...</p>";
+
+    } catch (error) {
+        console.error("Critical Error: Failed to load inventory from Firebase.", error);
+    }
 }
 
-// Open Shopify View Details Overlay Box dynamically
+// --- 4. MODAL UI CONTROLLER ---
 function openProductModal(productId) {
-    const product = productsData[productId];
-    if(!product) return;
+    const product = Store.inventory[productId];
+    if (!product) return;
 
-    // Load Title & Price State
+    // Populate Text & Price
     document.getElementById('modal-title').innerText = product.title;
-    document.getElementById('modal-price').innerText = "PKR " + product.price.toLocaleString();
+    document.getElementById('modal-price').innerText = `PKR ${product.price.toLocaleString()}`;
     
-    // Set Main Frame Image Reference
+    // Setup Main Image
     const mainImg = document.getElementById('modal-main-img');
     mainImg.src = product.images[0];
 
-    // Clear and Append List Descriptions
+    // Populate Descriptions cleanly
     const descContainer = document.getElementById('modal-description');
-    descContainer.innerHTML = "";
-    product.description.forEach(line => {
-        const li = document.createElement('li');
-        li.innerText = line;
-        descContainer.appendChild(li);
-    });
+    descContainer.innerHTML = product.description.map(line => `<li>${line.trim()}</li>`).join('');
 
-    // Populate Multi-Image Gallery Row View Grid 
+    // Setup Interactive Thumbnails
     const thumbContainer = document.getElementById('modal-thumbnails');
-    thumbContainer.innerHTML = "";
-    product.images.forEach((imgUrl, index) => {
-        const img = document.createElement('img');
-        img.src = imgUrl;
-        img.className = "thumb-img" + (index === 0 ? " active" : "");
-        img.onclick = function() {
-            mainImg.src = imgUrl;
+    thumbContainer.innerHTML = product.images.map((imgUrl, index) => `
+        <img src="${imgUrl}" class="thumb-img ${index === 0 ? 'active' : ''}" data-url="${imgUrl}">
+    `).join('');
+
+    // Attach Thumbnail Listeners
+    document.querySelectorAll('.thumb-img').forEach(thumb => {
+        thumb.addEventListener('click', (e) => {
+            mainImg.src = e.target.dataset.url;
             document.querySelectorAll('.thumb-img').forEach(t => t.classList.remove('active'));
-            img.classList.add('active');
-        };
-        thumbContainer.appendChild(img);
+            e.target.classList.add('active');
+        });
     });
 
-    // Configure Add Button directly for context execution block
+    // Attach Add to Cart Action
     const addBtn = document.getElementById('modal-add-btn');
-    addBtn.onclick = function() {
+    addBtn.onclick = () => {
         addToCart(product.title, product.price);
         closeProductModal();
     };
 
-    // Show window display block frame
+    // Reveal Modal
     document.getElementById('product-modal').style.display = "block";
 }
 
@@ -129,60 +127,87 @@ function closeProductModal() {
     document.getElementById('product-modal').style.display = "none";
 }
 
-// Universal Cart Array Operations
+// --- 5. CART CONTROLLER ---
+function toggleCart() {
+    document.getElementById('cart-sidebar').classList.toggle('open');
+}
+
 function addToCart(itemName, price) {
-    cart.push({ name: itemName, price: price });
-    total += price;
+    Store.cart.push({ name: itemName, price: price });
+    Store.total += price;
     updateCartUI();
-    
-    // Slide Open Cart Sidebar Panel view drawer natively
     document.getElementById('cart-sidebar').classList.add('open');
 }
 
 function updateCartUI() {
-    document.getElementById('cart-count').innerText = cart.length;
-    const cartItemsContainer = document.getElementById('cart-items');
+    document.getElementById('cart-count').innerText = Store.cart.length;
+    const container = document.getElementById('cart-items');
     
-    if (cart.length === 0) {
-        cartItemsContainer.innerHTML = '<p class="empty-msg">Your cart is empty.</p>';
+    if (Store.cart.length === 0) {
+        container.innerHTML = '<p class="empty-msg">Your cart is empty.</p>';
     } else {
-        cartItemsContainer.innerHTML = '';
-        cart.forEach((item) => {
-            const div = document.createElement('div');
-            div.className = 'cart-item';
-            div.innerHTML = `<span>${item.name}</span><strong>PKR ${item.price.toLocaleString()}</strong>`;
-            cartItemsContainer.appendChild(div);
-        });
+        container.innerHTML = Store.cart.map(item => `
+            <div class="cart-item">
+                <span>${item.name}</span>
+                <strong>PKR ${item.price.toLocaleString()}</strong>
+            </div>
+        `).join('');
     }
-    document.getElementById('cart-total').innerText = 'PKR ' + total.toLocaleString();
+    document.getElementById('cart-total').innerText = `PKR ${Store.total.toLocaleString()}`;
 }
 
-// Redirect and submit orders straight to business WhatsApp chat channel
-function sendToWhatsApp() {
-    if (cart.length === 0) {
+// --- 6. CHECKOUT & DATABASE BACKUP ---
+async function sendToWhatsApp() {
+    if (Store.cart.length === 0) {
         alert("Your cart is empty!");
         return;
     }
 
+    // Professional UI interaction: Show loading state
+    const checkoutBtn = document.querySelector('.checkout-btn');
+    const originalText = checkoutBtn.innerText;
+    checkoutBtn.innerText = "Processing...";
+    checkoutBtn.disabled = true;
+
+    try {
+        // Securely back up order to Firestore
+        await addDoc(collection(db, "orders"), {
+            items: Store.cart,
+            totalAmount: Store.total,
+            createdAt: serverTimestamp(),
+            status: "Pending Connection"
+        });
+    } catch (error) {
+        console.error("Order backup delayed, proceeding to WhatsApp.", error);
+    }
+
+    // Format WhatsApp Receipt
     let message = "Hello Libaas by Muneeb! I would like to place an order:\n\n";
-    cart.forEach((item, index) => {
+    Store.cart.forEach((item, index) => {
         message += `${index + 1}. ${item.name} - PKR ${item.price.toLocaleString()}\n`;
     });
-    message += `\n*Total Amount:* PKR ${total.toLocaleString()}\n\n`;
+    message += `\n*Total Amount:* PKR ${Store.total.toLocaleString()}\n\n`;
     message += "Please confirm my order and send shipping details. Thanks!";
 
+    // Reset button & Open WhatsApp
+    checkoutBtn.innerText = originalText;
+    checkoutBtn.disabled = false;
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank');
 }
 
-// Close Modal window if custom backgrounds are clicked
-window.onclick = function(event) {
+// --- 7. EVENT LISTENERS & EXPORTS ---
+window.onclick = (event) => {
     const modal = document.getElementById('product-modal');
-    if (event.target == modal) {
-        modal.style.display = "none";
-    }
-}
-// Make functions visible globally for HTML buttons
-window.openProductModal = openProductModal;
-window.closeProductModal = closeProductModal;
-window.toggleCart = toggleCart;
-window.sendToWhatsApp = sendToWhatsApp;
+    if (event.target === modal) closeProductModal();
+};
+
+// Expose necessary functions to the global window for HTML buttons
+Object.assign(window, {
+    openProductModal,
+    closeProductModal,
+    toggleCart,
+    sendToWhatsApp
+});
+
+// Boot up the store
+initializeStorefront();
