@@ -1,5 +1,5 @@
 // ==========================================================================
-// LIBAAS BY MUNEEB - PRO E-COMMERCE CORE
+// LIBAAS BY MUNEEB - COMPATIBLE PRO E-COMMERCE CORE
 // ==========================================================================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -19,14 +19,34 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const WHATSAPP_NUMBER = "923234962078";
 
-// --- 2. GLOBAL STATE (STORE) ---
+// --- 2. GLOBAL STATE (STORE) WITH HARDCODED FALLBACKS ---
 const Store = {
     cart: [],
     total: 0,
-    inventory: {}
+    inventory: {
+        // Keeps your old items working perfectly if clicked
+        1: {
+            title: "Classic Ivory Embroidered Lawn",
+            price: 4500,
+            description: ["Fabric: Premium Airjet Lawn Shirt (3 Meters)", "Dupatta: Digital Printed Pure Chiffon (2.5 Meters)", "Trouser: Dyed Cambric Cotton (2.5 Meters)", "Work: Heavy Intricate Front Thread Embroidery Patch"],
+            images: ["https://images.unsplash.com/photo-1610030469983-98e550d6193c?q=80&w=600&auto=format&fit=crop"]
+        },
+        2: {
+            title: "Crimson Luxury Festive 3-Piece",
+            price: 5200,
+            description: ["Fabric: Premium Luxury Chiffon Shirt", "Dupatta: Embroidered Net Border Finished Dupatta", "Trouser: Premium Silk Trouser Fabric with Borders", "Details: Sequins and Tilla Handwoven Threadwork Workpiece"],
+            images: ["https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?q=80&w=600&auto=format&fit=crop"]
+        },
+        3: {
+            title: "Midnight Black Chiffon Edition",
+            price: 5900,
+            description: ["Fabric: Jet Black Pure Airjet Crinkle Chiffon", "Organza Block Printed Luxury Dupatta", "Trouser: Premium Dyed Raw Silk (2.5 Meters)"],
+            images: ["https://images.unsplash.com/photo-1621184455862-c163dfb30e0f?q=80&w=600&auto=format&fit=crop"]
+        }
+    }
 };
 
-// --- 3. INVENTORY & DOM MANAGEMENT ---
+// --- 3. LOAD PRODUCTS FROM FIREBASE ---
 async function initializeStorefront() {
     try {
         const querySnapshot = await getDocs(collection(db, "products"));
@@ -38,19 +58,19 @@ async function initializeStorefront() {
             const data = doc.data();
             const id = doc.id;
             
-            // Clean & structure product data with safe fallbacks
+            // Build safe structure from Firebase data
             const product = {
                 title: data.name || "Exclusive Collection Suit",
                 price: Number(data.price) || 0,
-                description: data.description ? data.description.split(",") : ["Premium Quality Lawn", "Luxury Finish"],
+                description: data.description ? (typeof data.description === 'string' ? data.description.split(",") : data.description) : ["Premium Quality Lawn", "Luxury Finish"],
                 images: data.image ? [data.image] : ["https://images.unsplash.com/photo-1610030469983-98e550d6193c?q=80&w=600&auto=format&fit=crop"],
                 category: data.category ? data.category.trim() : "3 Piece"
             };
 
-            // Save to global state
+            // Save to live inventory map
             Store.inventory[id] = product;
 
-            // Generate beautifully structured HTML card
+            // Generate card HTML safely
             const cardHTML = `
                 <div class="product-card">
                     <img src="${product.images[0]}" alt="${product.title}" loading="lazy">
@@ -60,7 +80,6 @@ async function initializeStorefront() {
                 </div>
             `;
 
-            // Sort into optimized HTML strings
             if (product.category === "2 Piece") {
                 html2Piece += cardHTML;
             } else {
@@ -68,92 +87,114 @@ async function initializeStorefront() {
             }
         });
 
-        // Batch DOM updates for maximum rendering performance
+        // Insert items into your HTML if the containers exist
         const container2P = document.getElementById("suits-2piece");
         const container3P = document.getElementById("suits-3piece");
         
-        if (container2P) container2P.innerHTML = html2Piece || "<p>Coming Soon...</p>";
-        if (container3P) container3P.innerHTML = html3Piece || "<p>Coming Soon...</p>";
+        if (container2P && html2Piece) container2P.innerHTML = html2Piece;
+        if (container3P && html3Piece) container3P.innerHTML = html3Piece;
 
     } catch (error) {
-        console.error("Critical Error: Failed to load inventory from Firebase.", error);
+        console.warn("Firebase inventory load paused or empty. Using default storefront items.", error);
     }
 }
 
-// --- 4. MODAL UI CONTROLLER ---
+// --- 4. MODAL UI CONTROLLER (FLUID & BUG-FREE) ---
 function openProductModal(productId) {
     const product = Store.inventory[productId];
-    if (!product) return;
+    if (!product) {
+        console.error("Product not found for ID:", productId);
+        return;
+    }
 
-    // Populate Text & Price
-    document.getElementById('modal-title').innerText = product.title;
-    document.getElementById('modal-price').innerText = `PKR ${product.price.toLocaleString()}`;
+    // Populate Title & Price
+    const titleEl = document.getElementById('modal-title');
+    const priceEl = document.getElementById('modal-price');
+    if (titleEl) titleEl.innerText = product.title;
+    if (priceEl) priceEl.innerText = `PKR ${product.price.toLocaleString()}`;
     
-    // Setup Main Image
+    // Setup Main Display Image
     const mainImg = document.getElementById('modal-main-img');
-    mainImg.src = product.images[0];
+    if (mainImg && product.images && product.images[0]) {
+        mainImg.src = product.images[0];
+    }
 
-    // Populate Descriptions cleanly
+    // Populate Descriptions
     const descContainer = document.getElementById('modal-description');
-    descContainer.innerHTML = product.description.map(line => `<li>${line.trim()}</li>`).join('');
+    if (descContainer && product.description) {
+        descContainer.innerHTML = product.description.map(line => `<li>${line.trim()}</li>`).join('');
+    }
 
-    // Setup Interactive Thumbnails
+    // Setup Interactive Thumbnails safely if the container exists
     const thumbContainer = document.getElementById('modal-thumbnails');
-    thumbContainer.innerHTML = product.images.map((imgUrl, index) => `
-        <img src="${imgUrl}" class="thumb-img ${index === 0 ? 'active' : ''}" data-url="${imgUrl}">
-    `).join('');
+    if (thumbContainer && product.images) {
+        thumbContainer.innerHTML = product.images.map((imgUrl, index) => `
+            <img src="${imgUrl}" class="thumb-img ${index === 0 ? 'active' : ''}" data-url="${imgUrl}">
+        `).join('');
 
-    // Attach Thumbnail Listeners
-    document.querySelectorAll('.thumb-img').forEach(thumb => {
-        thumb.addEventListener('click', (e) => {
-            mainImg.src = e.target.dataset.url;
-            document.querySelectorAll('.thumb-img').forEach(t => t.classList.remove('active'));
-            e.target.classList.add('active');
+        document.querySelectorAll('.thumb-img').forEach(thumb => {
+            thumb.addEventListener('click', (e) => {
+                if (mainImg) mainImg.src = e.target.dataset.url;
+                document.querySelectorAll('.thumb-img').forEach(t => t.classList.remove('active'));
+                e.target.classList.add('active');
+            });
         });
-    });
+    }
 
-    // Attach Add to Cart Action
+    // Attach Dynamic Add to Cart Action
     const addBtn = document.getElementById('modal-add-btn');
-    addBtn.onclick = () => {
-        addToCart(product.title, product.price);
-        closeProductModal();
-    };
+    if (addBtn) {
+        addBtn.onclick = () => {
+            addToCart(product.title, product.price);
+            closeProductModal();
+        };
+    }
 
-    // Reveal Modal
-    document.getElementById('product-modal').style.display = "block";
+    // Display the Modal view frame
+    const modalFrame = document.getElementById('product-modal');
+    if (modalFrame) modalFrame.style.display = "block";
 }
 
 function closeProductModal() {
-    document.getElementById('product-modal').style.display = "none";
+    const modalFrame = document.getElementById('product-modal');
+    if (modalFrame) modalFrame.style.display = "none";
 }
 
 // --- 5. CART CONTROLLER ---
 function toggleCart() {
-    document.getElementById('cart-sidebar').classList.toggle('open');
+    const sidebar = document.getElementById('cart-sidebar');
+    if (sidebar) sidebar.classList.toggle('open');
 }
 
 function addToCart(itemName, price) {
     Store.cart.push({ name: itemName, price: price });
     Store.total += price;
     updateCartUI();
-    document.getElementById('cart-sidebar').classList.add('open');
+    
+    const sidebar = document.getElementById('cart-sidebar');
+    if (sidebar) sidebar.classList.add('open');
 }
 
 function updateCartUI() {
-    document.getElementById('cart-count').innerText = Store.cart.length;
+    const countEl = document.getElementById('cart-count');
     const container = document.getElementById('cart-items');
+    const totalEl = document.getElementById('cart-total');
+
+    if (countEl) countEl.innerText = Store.cart.length;
     
-    if (Store.cart.length === 0) {
-        container.innerHTML = '<p class="empty-msg">Your cart is empty.</p>';
-    } else {
-        container.innerHTML = Store.cart.map(item => `
-            <div class="cart-item">
-                <span>${item.name}</span>
-                <strong>PKR ${item.price.toLocaleString()}</strong>
-            </div>
-        `).join('');
+    if (container) {
+        if (Store.cart.length === 0) {
+            container.innerHTML = '<p class="empty-msg">Your cart is empty.</p>';
+        } else {
+            container.innerHTML = Store.cart.map(item => `
+                <div class="cart-item">
+                    <span>${item.name}</span>
+                    <strong>PKR ${item.price.toLocaleString()}</strong>
+                </div>
+            `).join('');
+        }
     }
-    document.getElementById('cart-total').innerText = `PKR ${Store.total.toLocaleString()}`;
+    if (totalEl) totalEl.innerText = `PKR ${Store.total.toLocaleString()}`;
 }
 
 // --- 6. CHECKOUT & DATABASE BACKUP ---
@@ -163,14 +204,16 @@ async function sendToWhatsApp() {
         return;
     }
 
-    // Professional UI interaction: Show loading state
     const checkoutBtn = document.querySelector('.checkout-btn');
-    const originalText = checkoutBtn.innerText;
-    checkoutBtn.innerText = "Processing...";
-    checkoutBtn.disabled = true;
+    let originalText = "Checkout";
+    
+    if (checkoutBtn) {
+        originalText = checkoutBtn.innerText;
+        checkoutBtn.innerText = "Processing...";
+        checkoutBtn.disabled = true;
+    }
 
     try {
-        // Securely back up order to Firestore
         await addDoc(collection(db, "orders"), {
             items: Store.cart,
             totalAmount: Store.total,
@@ -178,10 +221,9 @@ async function sendToWhatsApp() {
             status: "Pending Connection"
         });
     } catch (error) {
-        console.error("Order backup delayed, proceeding to WhatsApp.", error);
+        console.error("Backup delayed, opening WhatsApp directly.", error);
     }
 
-    // Format WhatsApp Receipt
     let message = "Hello Libaas by Muneeb! I would like to place an order:\n\n";
     Store.cart.forEach((item, index) => {
         message += `${index + 1}. ${item.name} - PKR ${item.price.toLocaleString()}\n`;
@@ -189,19 +231,20 @@ async function sendToWhatsApp() {
     message += `\n*Total Amount:* PKR ${Store.total.toLocaleString()}\n\n`;
     message += "Please confirm my order and send shipping details. Thanks!";
 
-    // Reset button & Open WhatsApp
-    checkoutBtn.innerText = originalText;
-    checkoutBtn.disabled = false;
+    if (checkoutBtn) {
+        checkoutBtn.innerText = originalText;
+        checkoutBtn.disabled = false;
+    }
+    
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank');
 }
 
-// --- 7. EVENT LISTENERS & EXPORTS ---
+// --- 7. GLOBAL WINDOW BINDINGS ---
 window.onclick = (event) => {
     const modal = document.getElementById('product-modal');
     if (event.target === modal) closeProductModal();
 };
 
-// Expose necessary functions to the global window for HTML buttons
 Object.assign(window, {
     openProductModal,
     closeProductModal,
@@ -209,5 +252,5 @@ Object.assign(window, {
     sendToWhatsApp
 });
 
-// Boot up the store
+// Run storefront initialization
 initializeStorefront();
